@@ -50,10 +50,12 @@ footer {
     padding: 20px;
 }
 
-.clearfix:after {
-    content: "";
-    display: table;
-    clear: both;
+h1,
+h2,
+h3 {
+    background-color: #fff;
+    margin: 0;
+    padding: 8px;
 }
 
 .sticky {
