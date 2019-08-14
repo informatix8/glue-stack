@@ -9,13 +9,6 @@ body {
     font-size: 32px;
 }
 
-header {
-    background: red;
-    color: white;
-    font-weight: bold;
-    padding: 20px;
-}
-
 nav {
     background: orange;
     padding: 20px;
@@ -28,25 +21,8 @@ main {
     max-width: 1440px;
 }
 
-aside {
-    width: 30%;
-    padding: 20px;
-}
-
-article {
-    width: 70%;
-    padding: 20px;
-}
-
 .title-bar {
     background-color: #fff;
-    padding: 20px;
-}
-
-footer {
-    clear: both;
-    background: purple;
-    color: white;
     padding: 20px;
 }
 
