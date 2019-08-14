@@ -1,16 +1,15 @@
 import GlueStick from '@informatix8/glue-stick';
-import merge from "lodash.merge";
+import merge from 'lodash.merge';
 
 class GlueStack {
 
     /**
      @class GlueStack
      @summary Sticks a stack of headers inside the viewport instead of scrolling out of view.
-     @see https://github.com/somewebmedia/hc-sticky
      @param {Object} options - Supplied configuration
-     @param {String|HTMLElement} options.mainContainer - Container which contains the headers as direct children
-     @param {String|HTMLElement} options.hierarchySelectors - Array of selectors for getting headers hierarchy **Required**
-     @param {String[]|HTMLElement[]} options.zIndex - zIndex of the lowest header element. **Optional**
+     @param {HTMLElement} options.mainContainer - Container which contains the headers as direct children
+     @param {String[]|HTMLElement[]} options.hierarchySelectors - Array of selectors for getting headers hierarchy **Required**
+     @param {Number} options.zIndex - zIndex of the lowest header element. **Optional**
      */
     constructor(options) {
         if (options === undefined) {
