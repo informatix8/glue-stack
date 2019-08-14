@@ -214,7 +214,6 @@ class GlueStack {
             }
 
             if (obj.glueStick) {
-                // const glueStickTop = parseInt(obj.glueStick.subject.style.top);
                 const glueStickTop = obj.glueStick.top;
 
                 const changed = obj.glueStick.subject !== obj.lastAboveViewPort || glueStickTop !== obj.topSum;
