@@ -49,7 +49,6 @@ class GlueStack {
         };
 
         const start = () => {
-            // animloop();
             window.addEventListener('scroll', () => {
                 this.calculateTops();
             });
