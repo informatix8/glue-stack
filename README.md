@@ -1,9 +1,10 @@
 # Glue Stack
 
-Sticks a stack of headers inside the viewport instead of scrolling out of view.
+Sticks a hierarchy of elements within the viewport instead of scrolling out of view.
 
 ## Features
-- Multiple sticky elements stacked together
+- Sticky elements are replaced by their peer when a peer collides with it (pushing up from the bottom).
+- Child sticky elements are replaced by their parents’ siblings (i.e. uncles, great uncles) when they collide.
 
 ## Dependencies
 
