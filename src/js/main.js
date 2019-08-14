@@ -166,7 +166,6 @@ class GlueStack {
         let sumOfHeights = 0;
         for (let chNo = 0; chNo < this.mainContainer.children.length; chNo++) {
             const node = this.mainContainer.children[chNo];
-            // if (node.classList.contains('sticky')) {
             if (node.classList.contains('sticky-spacer')) {
                 continue;
             }
