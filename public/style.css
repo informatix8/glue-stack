@@ -38,3 +38,9 @@ h3 {
     overflow: auto;
     z-index: 10;
 }
+
+.search-box {
+    background: lightskyblue;
+    padding: 20px;
+    font-size: 16px;
+}
