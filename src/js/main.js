@@ -10,6 +10,14 @@ class GlueStack {
      @param {HTMLElement} options.mainContainer - Container which contains the headers as direct children
      @param {String[]|HTMLElement[]} options.hierarchySelectors - Array of selectors for getting headers hierarchy **Required**
      @param {Number} options.zIndex - zIndex of the lowest header element. **Optional**
+     @param {GlueStick} options.seniorSticky - Collapsible sticky element which appears while scrolling up. **Optional**
+     @param {Number} [options.stopStickingMaxWidth=600] Maximum responsive pixel width where the sticky stops sticking
+     @param {Object} options.glueStickOpts - additional params to pass to glueStick instances **Optional**
+     @param {Object} [options.callbacks] - User supplied functions to execute at given stages of the component lifecycle
+     @param {Function} options.callbacks.preCreate
+     @param {Function} options.callbacks.postCreate
+     @param {Function} options.callbacks.preDestroy
+     @param {Function} options.callbacks.postDestroy
      */
     constructor(options) {
         if (options === undefined) {
@@ -18,8 +26,11 @@ class GlueStack {
 
         const defaults = {};
 
+        defaults.stopStickingMaxWidth = options.stopStickingMaxWidth || 600;
         defaults.hierarchySelectors = [];
         defaults.mainContainer = document.body;
+
+        defaults.glueStickOpts = {};
 
         merge(this, defaults, options);
 
@@ -30,6 +41,26 @@ class GlueStack {
             lastAboveViewPort: null,
             topSum: 0
         }));
+
+        this.callCustom('preCreate');
+
+        this.lastScrollY = window.scrollY;
+        this.scrollLength = 0;
+        if (this.seniorSticky) {
+            this.seniorSticky.top = -window.scrollY;
+            this.seniorSticky.positionCalculations = [
+                function () {
+                    const opts = {
+                        top: this.top
+                    };
+                    if (this.prevOpts && this.prevOpts.top === opts.top && this.prevOpts.disable === opts.disable) {
+                        return;
+                    }
+                    merge(this.prevOpts, {}, opts);
+                    this.glued.update(opts);
+                }
+            ];
+        }
 
         const requestAnimFrame = (function () {
             return window.requestAnimationFrame ||
@@ -49,19 +80,24 @@ class GlueStack {
         };
 
         const start = () => {
-            window.addEventListener('scroll', () => {
-                this.calculateTops();
-            });
+            // animloop();
+
+            this.scrollFn = this.onScroll.bind(this);
+            window.addEventListener('scroll', this.scrollFn);
             this.calculateTops();
         };
 
         if (document.readyState === 'complete') {
             start();
         } else {
-            window.addEventListener('load', () => { // DO NOT INITIATE BEFORE window.onload !!!
-                start();
-            });
+            this.startFn = start;
+            window.addEventListener('load', start); // DO NOT INITIATE BEFORE window.onload !!!
         }
+
+        const destroyFn = this.destroy.bind(this);
+        window.addEventListener('unload', destroyFn);
+
+        this.callCustom('postCreate');
     }
 
     /**
@@ -72,7 +108,62 @@ class GlueStack {
      * @public
      */
     destroy() {
+        this.callCustom('preDestroy');
         this.destroyed = true;
+        this.hierarchy.forEach(hierarchyMember => {
+            if (hierarchyMember.glueStick) {
+                hierarchyMember.glueStick.destroy();
+                hierarchyMember.glueStick = null;
+            }
+        });
+
+        if (this.scrollFn) {
+            window.removeEventListener('scroll', this.scrollFn);
+        }
+        if (this.startFn) {
+            window.removeEventListener('load', this.startFn);
+        }
+
+        this.callCustom('postDestroy');
+    }
+
+    /**
+     * @method onScroll
+     * @memberOf GlueStack
+     * @instance
+     * @summary Handles scrollDown
+     * @private
+     */
+    onScroll() {
+        if (this.seniorSticky) {
+            const bbox = this.seniorSticky.subject.getBoundingClientRect();
+
+            const scrollLength = window.scrollY - this.lastScrollY;
+
+            if (scrollLength < 0) { // Scroll up
+                if (this.scrollLength > bbox.height) {
+                    this.scrollLength = bbox.height;
+                }
+            } else {
+                if (this.scrollLength < 0) {
+                    this.scrollLength = 0;
+                }
+            }
+
+            this.scrollLength += scrollLength;
+
+            this.seniorSticky.top = -this.scrollLength;
+            if (this.seniorSticky.top < -bbox.height) {
+                this.seniorSticky.top = -bbox.height;
+            }
+            if (this.seniorSticky.top > 0) {
+                this.seniorSticky.top = 0;
+            }
+        }
+
+        this.lastScrollY = window.scrollY;
+
+        this.calculateTops();
     }
 
     /**
@@ -83,9 +174,9 @@ class GlueStack {
      * @private
      */
     cleanHierarchy() {
-        this.hierarchy.forEach(obj => {
-            obj.lastAboveViewPort = null;
-            obj.topSum = 0;
+        this.hierarchy.forEach(hierarchyMember => {
+            hierarchyMember.lastAboveViewPort = null;
+            hierarchyMember.topSum = 0;
         });
     }
 
@@ -123,14 +214,16 @@ class GlueStack {
      * @private
      */
     calculateHierarchyOffsets(scrollY) {
-        this.hierarchy.forEach(obj => {
-            const seniors = this.hierarchy.filter(obj2 => obj2.level <= obj.level);
-            const hierarchySelectorsQuery = seniors.map(obj => obj.selector).join(',');
+        let seniorStickyOffset = this.seniorSticky ? this.seniorSticky.subject.getBoundingClientRect().bottom : 0;
+
+        this.hierarchy.forEach(hierarchyMember => {
+            const seniors = this.hierarchy.filter(hierarchyMember2 => hierarchyMember2.level <= hierarchyMember.level);
+            const hierarchySelectorsQuery = seniors.map(hierarchyMember2 => hierarchyMember2.selector).join(',');
 
             let nextHierarchyElement;
-            if (obj.lastAboveViewPort) {
+            if (hierarchyMember.lastAboveViewPort) {
 
-                let nextElementSibling = obj.lastAboveViewPort.nextElementSibling;
+                let nextElementSibling = hierarchyMember.lastAboveViewPort.nextElementSibling;
                 while (nextElementSibling) {
                     if (nextElementSibling.matches(hierarchySelectorsQuery)) {
                         nextHierarchyElement = nextElementSibling;
@@ -141,13 +234,15 @@ class GlueStack {
             }
 
             if (nextHierarchyElement) {
-                const bottom = obj.topSum + obj.lastAboveViewPort.offsetHeight;
+                const bottom = hierarchyMember.topSum + hierarchyMember.lastAboveViewPort.offsetHeight;
                 const nextTopFromViewport = nextHierarchyElement.getBoundingClientRect().top;
 
                 if (nextTopFromViewport <= bottom) {
-                    obj.topSum -= (bottom - nextTopFromViewport);
+                    hierarchyMember.topSum -= (bottom - nextTopFromViewport);
                 }
             }
+
+            hierarchyMember.topSum += seniorStickyOffset;
         });
     }
 
@@ -161,11 +256,14 @@ class GlueStack {
     calculateTops() {
         const scrollY = window.scrollY;
 
+        let seniorStickyOffset = this.seniorSticky ? this.seniorSticky.subject.getBoundingClientRect().bottom : 0;
+
         this.cleanHierarchy();
 
         let sumOfHeights = 0;
         for (let chNo = 0; chNo < this.mainContainer.children.length; chNo++) {
             const node = this.mainContainer.children[chNo];
+            // if (node.classList.contains('sticky')) {
             if (node.classList.contains('sticky-spacer')) {
                 continue;
             }
@@ -188,7 +286,7 @@ class GlueStack {
                     }
                 }
 
-                if (node.absoluteTop - scrollY <= topSum) {
+                if (node.absoluteTop - scrollY <= topSum + seniorStickyOffset) {
                     this.hierarchy[level].lastAboveViewPort = node;
                     this.hierarchy[level].topSum = topSum;
 
@@ -204,34 +302,35 @@ class GlueStack {
 
         this.calculateHierarchyOffsets(scrollY);
 
-        this.hierarchy.forEach(obj => {
-            if (!obj.lastAboveViewPort) {
-                if (obj.glueStick) {
-                    obj.glueStick.destroy();
-                    obj.glueStick = null;
+        this.hierarchy.forEach(hierarchyMember => {
+            if (!hierarchyMember.lastAboveViewPort) {
+                if (hierarchyMember.glueStick) {
+                    hierarchyMember.glueStick.destroy();
+                    hierarchyMember.glueStick = null;
                 }
                 return;
             }
 
-            if (obj.glueStick) {
-                const glueStickTop = obj.glueStick.top;
+            if (hierarchyMember.glueStick) {
+                const glueStickTop = hierarchyMember.glueStick.top;
 
-                const changed = obj.glueStick.subject !== obj.lastAboveViewPort || glueStickTop !== obj.topSum;
+                const changed = hierarchyMember.glueStick.subject !== hierarchyMember.lastAboveViewPort || glueStickTop !== hierarchyMember.topSum;
                 if (!changed) {
                     return;
                 }
-                obj.glueStick.destroy();
+                hierarchyMember.glueStick.destroy();
             }
 
             let zIndex;
             if (this.zIndex) {
-                zIndex = this.zIndex + this.hierarchy.length - 1 - obj.level;
+                zIndex = this.zIndex + this.hierarchy.length - 1 - hierarchyMember.level;
             }
 
-            obj.glueStick = new GlueStick({
-                subject: obj.lastAboveViewPort,
-                stopStickingMaxWidth: 200,
-                top: obj.topSum,
+            const glueStickOpts = {};
+            merge(glueStickOpts, this.glueStickOpts, {
+                subject: hierarchyMember.lastAboveViewPort,
+                stopStickingMaxWidth: this.stopStickingMaxWidth,
+                top: hierarchyMember.topSum,
                 zIndex: zIndex,
                 positionCalculations: [
                     function () {
@@ -241,13 +340,31 @@ class GlueStack {
                         if (this.prevOpts && this.prevOpts.top === opts.top && this.prevOpts.disable === opts.disable) {
                             return;
                         }
-                        this.prevOpts = Object.assign({}, opts);
+                        merge(this.prevOpts, {}, opts);
                         this.glued.update(opts);
                     }
                 ]
             });
+
+            hierarchyMember.glueStick = new GlueStick(glueStickOpts);
         });
     }
+
+    /**
+     * @method callCustom
+     * @memberOf GlueStick
+     * @instance
+     * @summary execute an implementation defined callback on a certain action
+     * @private
+     */
+    callCustom(userFn) {
+        const sliced = Array.prototype.slice.call(arguments, 1);
+
+        if (this.callbacks !== undefined && this.callbacks[userFn] !== undefined && typeof this.callbacks[userFn] === 'function') {
+            this.callbacks[userFn].apply(this, sliced);
+        }
+    }
+
 }
 
 export default GlueStack;

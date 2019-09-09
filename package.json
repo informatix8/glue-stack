@@ -20,7 +20,7 @@
     "url": "git@github.com:informatix8/glue-stack.git"
   },
   "dependencies": {
-    "@informatix8/glue-stick": "^2.0.0",
+    "@informatix8/glue-stick": "^2.1.0",
     "lodash.merge": "^4.6.2"
   },
   "devDependencies": {
@@ -29,7 +29,8 @@
     "jsdoc": "^3.6.3",
     "jshint": "^2.10.2",
     "npm-run-all": "^4.1.5",
-    "rollup": "^1.21.0",
+    "rimraf": "^3.0.0",
+    "rollup": "^1.21.2",
     "rollup-plugin-commonjs": "^10.1.0",
     "rollup-plugin-filesize": "^6.2.0",
     "rollup-plugin-node-resolve": "^5.2.0",
@@ -44,8 +45,10 @@
     "_start": "serve public",
     "_watch": "rollup -c -w",
     "_lint_global": "jshint ./src",
-    "_lint": "node ./node_modules/jshint/dist/jshint.js ./src",
-    "_jsdoc": "node ./node_modules/jsdoc/jsdoc.js -c jsdoc.conf.json"
+    "_lint": "node ./node_modules/jshint/dist/jshint.js ./src && jscs ./src",
+    "_jsdoc": "node ./node_modules/jsdoc/jsdoc.js -c jsdoc.conf.json",
+    "clean": "rimraf ./dist ./public/glue-stack.* ./public/glue-stick.* ./cypress",
+    "deepclean": "npm run clean && rimraf ./node_modules"
   },
   "files": [
     "dist",
