@@ -40,13 +40,14 @@
   },
   "scripts": {
     "test": "cypress open",
-    "dev": "npm-run-all --parallel _start _watch",
+    "dev": "npm-run-all --parallel _glue_stick_copy _start _watch",
     "build": "rollup -c && npm run _lint && npm run _jsdoc",
     "_start": "serve public",
     "_watch": "rollup -c -w",
     "_lint_global": "jshint ./src",
     "_lint": "node ./node_modules/jshint/dist/jshint.js ./src && jscs ./src",
     "_jsdoc": "node ./node_modules/jsdoc/jsdoc.js -c jsdoc.conf.json",
+    "_glue_stick_copy": "cp ./node_modules/@informatix8/glue-stick/dist/glue-stick.all.umd.js ./public",
     "clean": "rimraf ./dist ./public/glue-stack.* ./public/glue-stick.* ./cypress",
     "deepclean": "npm run clean && rimraf ./node_modules"
   },
